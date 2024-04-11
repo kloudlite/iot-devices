@@ -26,15 +26,11 @@ func (c *client) listenBroadcast() error {
 		return err
 	}
 
-	c.logger.Infof("Listening for broadcast messages...")
-
 	conn, err := net.ListenUDP(udpConnType, listenAddr)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-
-	c.logger.Infof("Listening for messages...")
 
 	buffer := make([]byte, 1024)
 	for {

@@ -1,77 +1,83 @@
 package local
 
 import (
-	"context"
 	"fmt"
+	"strings"
 	"time"
 
-	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"sync/atomic"
-
+	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/kloudlite/iot-devices/constants"
+
+	_ "github.com/caddyserver/caddy/v2/modules/standard"
 )
 
 var (
 	currentTargetIndex int32 = 0
 )
 
+var prevIps = []string{}
+
 func (c *client) listenProxy() error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		targetURL, err := c.getNextTarget()
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to parse target URL: %s", err.Error()), http.StatusServiceUnavailable)
-			return
-		}
-
-		proxy := httputil.NewSingleHostReverseProxy(targetURL)
-		r.Host = targetURL.Host
-		proxy.ServeHTTP(w, r)
-	})
-
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", constants.ProxyServerPort),
-		Handler: mux,
-	}
-
-	// Listen for context cancellation in a separate goroutine
-	go func() {
-		<-c.ctx.Done() // This blocks until the context is cancelled
-
-		// Context has been cancelled, shutdown the server
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			c.logger.Errorf(err, "Failed to gracefully shutdown server")
-		}
-	}()
-
-	c.logger.Infof("Starting server on port %d", constants.ProxyServerPort)
-	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		// ListenAndServe always returns a non-nil error. ErrServerClosed is returned when we call Shutdown
-		c.logger.Errorf(err, "Failed to start server")
+	err := caddy.Run(&caddy.Config{})
+	if err != nil {
 		return err
 	}
 
-	return nil
+	defer caddy.Stop()
+
+	for {
+		if c.ctx.Err() != nil {
+			return fmt.Errorf("context cancelled")
+		}
+
+		hbs := hubs.GetHubs()
+
+		func() {
+
+			if len(hbs) == 0 {
+				c.logger.Infof("No hubs found")
+				return
+			}
+
+			if fmt.Sprintf("%#v", hbs) == fmt.Sprintf("%#v", prevIps) {
+				return
+			}
+
+			caddyfileConfig := fmt.Sprintf(`
+* {
+  reverse_proxy %s
 }
+			`, strings.Join(func() []string {
 
-func (c *client) getNextTarget() (*url.URL, error) {
-	targets := hubs.GetHubs()
+				var targets []string
 
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("No targets available")
+				for _, h := range hbs {
+					targets = append(targets, fmt.Sprintf("http://%s:%d", h, constants.ProxyServerPort))
+				}
+
+				return targets
+
+			}(), " "))
+
+			fmt.Println(caddyfileConfig)
+
+			adapter := caddyconfig.GetAdapter("caddyfile")
+			if adapter == nil {
+				c.logger.Errorf(nil, "Caddyfile adapter not found")
+				return
+			}
+			caddyConfig, _, err := adapter.Adapt([]byte(caddyfileConfig), nil)
+			if err != nil {
+				c.logger.Errorf(err, "Failed to adapt Caddyfile")
+				return
+			}
+
+			if err := caddy.Load(caddyConfig, true); err != nil {
+				c.logger.Errorf(err, "Failed to load Caddy config")
+			}
+		}()
+
+		time.Sleep(5 * time.Second)
 	}
-
-	index := atomic.AddInt32(&currentTargetIndex, 1)
-	index = index % int32(len(targets))
-
-	targetURL, err := url.Parse(fmt.Sprintf("http://%s:%d", targets[index], constants.ProxyServerPort))
-	if err != nil {
-		return nil, err
-	}
-	return targetURL, nil
 }

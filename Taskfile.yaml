@@ -8,6 +8,20 @@ tasks:
     cmds:
       - nodemon -q -e 'go' --signal SIGTERM --exec "task build && ./bin/server || exit 0"
 
+  dev:local:
+    env:
+      CONFIG_PATH: ./bin/config.yaml
+      ENDPOINT: localhost:8001
+    cmds:
+      - nodemon -q -e 'go' --signal SIGTERM --exec "task build && ./bin/server --mode=local || exit 0"
+
+  dev:hub:
+    env:
+      CONFIG_PATH: ./bin/config.yaml
+      ENDPOINT: localhost:8001
+    cmds:
+      - nodemon -q -e 'go' --signal SIGTERM --exec "task build && ./bin/server --mode=hub || exit 0"
+
   scp:
     preconditions:
       - sh: '[ -n "{{.IP}}" ]'

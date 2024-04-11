@@ -77,5 +77,5 @@ func GetConfigPath() string {
 		return cp
 	}
 
-	return "/boot/firmware/kloudlite-conf.yaml"
+	return "/home/raspberry/kloudlite-conf.yaml"
 }

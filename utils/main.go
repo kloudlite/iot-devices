@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -23,6 +24,8 @@ func IsConn() bool {
 		return true
 	}
 
+	fmt.Println("[ERROR] Connection is unhealthy")
+
 	return false
 }
 
@@ -33,4 +36,10 @@ func GenerateWgKeys() ([]byte, []byte, error) {
 	}
 
 	return []byte(key.PublicKey().String()), []byte(key.String()), nil
+}
+
+func GetDomains() []string {
+	return []string{
+		constants.IotServerEndpoint,
+	}
 }

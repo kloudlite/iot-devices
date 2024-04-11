@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"time"
 
 	"github.com/kloudlite/iot-devices/devices/common"
@@ -12,20 +13,27 @@ import (
 )
 
 func main() {
+
+	var mode string
+	flag.StringVar(&mode, "mode", "default", "--mode [local|hub|default]")
+	flag.Parse()
+
 	go common.StartPing()
 
-	// if err := Run(); err != nil {
-	// 	println(err.Error())
-	// }
-
-	// if err := OnlyLocal(); err != nil {
-	// 	println(err.Error())
-	// }
-	//
-	if err := OnlyHub(); err != nil {
-		println(err.Error())
+	switch mode {
+	case "local":
+		if err := OnlyLocal(); err != nil {
+			println(err.Error())
+		}
+	case "hub":
+		if err := OnlyHub(); err != nil {
+			println(err.Error())
+		}
+	default:
+		if err := Run(); err != nil {
+			println(err.Error())
+		}
 	}
-
 }
 
 func OnlyLocal() error {
