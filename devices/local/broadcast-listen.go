@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/kloudlite/iot-devices/constants"
+	"github.com/kloudlite/iot-devices/devices/hub"
 )
 
 const (
@@ -45,12 +46,22 @@ func (c *client) listenBroadcast() error {
 		}
 
 		if addr.String() != localAddr.String() {
+
+			var dm hub.Dms
+
+			if err := dm.FromBytes(buffer[:n]); err != nil {
+				c.logger.Errorf(err, "Error decoding message")
+				continue
+			}
+
 			if constants.IsDebug() {
 				c.logger.Infof("Received message from %s: %s", addr, string(buffer[:n]))
 			}
 
-			hubs[addr.IP.String()] = hub{
-				lastPing: time.Now(),
+			d := time.Now()
+			hubs[addr.IP.String()] = hb{
+				lastPing: &d,
+				domains:  dm,
 			}
 		}
 	}

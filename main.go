@@ -22,21 +22,21 @@ func main() {
 
 	switch mode {
 	case "local":
-		if err := OnlyLocal(); err != nil {
+		if err := onlyLocal(); err != nil {
 			println(err.Error())
 		}
 	case "hub":
-		if err := OnlyHub(); err != nil {
+		if err := onlyHub(); err != nil {
 			println(err.Error())
 		}
 	default:
-		if err := Run(); err != nil {
+		if err := run(); err != nil {
 			println(err.Error())
 		}
 	}
 }
 
-func OnlyLocal() error {
+func onlyLocal() error {
 	l, err := logging.New(&logging.Options{})
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func OnlyLocal() error {
 	return nil
 }
 
-func OnlyHub() error {
+func onlyHub() error {
 	l, err := logging.New(&logging.Options{})
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func OnlyHub() error {
 	return nil
 }
 
-func Run() error {
+func run() error {
 	l, err := logging.New(&logging.Options{})
 	if err != nil {
 		return err

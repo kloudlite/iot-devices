@@ -1,8 +1,13 @@
 package utils
 
 import (
+	"encoding/csv"
 	"fmt"
+	"net"
 	"net/http"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/kloudlite/iot-devices/constants"
@@ -42,4 +47,43 @@ func GetDomains() []string {
 	return []string{
 		constants.IotServerEndpoint,
 	}
+}
+
+func ExecCmd(cmdString string, verbose bool) error {
+	r := csv.NewReader(strings.NewReader(cmdString))
+	r.Comma = ' '
+	cmdArr, err := r.Read()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(cmdArr[0], cmdArr[1:]...)
+	if verbose {
+		fmt.Println("[#] " + strings.Join(cmdArr, " "))
+		cmd.Stdout = os.Stdout
+	}
+
+	cmd.Stderr = os.Stderr
+	// s.Start()
+	err = cmd.Run()
+	// s.Stop()
+	return err
+}
+
+func GetIps(domain string) ([]string, error) {
+	d := []string{}
+
+	ips, err := net.LookupIP(domain)
+	if err != nil {
+		return d, err
+	}
+
+	for _, ip := range ips {
+
+		if ip.To4() != nil {
+			d = append(d, ip.String())
+		}
+	}
+
+	return d, nil
 }

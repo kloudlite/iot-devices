@@ -9,19 +9,29 @@ import (
 
 	"github.com/kloudlite/iot-devices/constants"
 	"github.com/kloudlite/iot-devices/pkg/conf"
-	// "github.com/kloudlite/iot-devices/pkg/logging"
+	"github.com/kloudlite/iot-devices/pkg/logging"
 )
+
+var (
+	domains = []string{
+		constants.IotServerEndpoint,
+	}
+)
+
+func GetDomains() []string {
+	return domains
+}
 
 func StartPing() {
 
-	// l, err := logging.New(&logging.Options{})
-	// if err != nil {
-	// 	panic(err)
-	// }
+	l, err := logging.New(&logging.Options{})
+	if err != nil {
+		panic(err)
+	}
 
 	for {
 		if err := ping(); err != nil {
-			// l.Errorf(err, "sending ping to server")
+			l.Errorf(err, "sending ping to server")
 		}
 
 		time.Sleep(constants.PingInterval * time.Second)
@@ -39,7 +49,7 @@ func ping() error {
 	}
 
 	var data = struct {
-		PublicKey string `json:"public_key"`
+		PublicKey string `json:"publicKey"`
 	}{
 		PublicKey: c.PublicKey,
 	}
@@ -55,6 +65,10 @@ func ping() error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	// read all the response body
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(resp.Body)
 
 	if resp.StatusCode == http.StatusOK {
 		return nil

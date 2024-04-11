@@ -5,32 +5,35 @@ import (
 	"time"
 
 	"github.com/kloudlite/iot-devices/constants"
+	"github.com/kloudlite/iot-devices/devices/hub"
 	"github.com/kloudlite/iot-devices/pkg/logging"
 )
 
-type hub struct {
-	lastPing time.Time
+type hb struct {
+	lastPing *time.Time
+	domains  hub.Dms
 }
 
-type hubstype map[string]hub
+type hubstype map[string]hb
 
 func (h *hubstype) cleanup() {
 	for k, v := range *h {
-		if time.Since(v.lastPing) > constants.ExpireDuration*time.Second {
+		if v.lastPing != nil && time.Since(*v.lastPing) > constants.ExpireDuration*time.Second {
 			delete(*h, k)
 		}
 	}
 }
 
-func (h *hubstype) GetHubs() []string {
+func (h *hubstype) GetHubs() map[string]hb {
 	h.cleanup()
 
-	var hubs []string
-	for k := range *h {
-		hubs = append(hubs, k)
+	d := map[string]hb{}
+	for k, v := range *h {
+		v.lastPing = nil
+		d[k] = v
 	}
 
-	return hubs
+	return d
 }
 
 var hubs = hubstype{}
@@ -49,14 +52,10 @@ func Run(ctx context.Context, logger logging.Logger) error {
 	c.logger.Infof("Starting local")
 
 	go func() {
-		if err := c.listenProxy(); err != nil {
-			// TODO: handle error
-			panic(err)
-		}
+		c.ipTableRules()
 	}()
 
 	if err := c.listenBroadcast(); err != nil {
-		// TODO: handle error
 		return err
 	}
 

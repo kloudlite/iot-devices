@@ -19,12 +19,7 @@ func Run(ctx context.Context, logger logging.Logger) error {
 
 	c.logger.Infof("Starting hub")
 
-	go func() {
-		if err := c.listenProxy(); err != nil {
-			// TODO: handle error
-			panic(err)
-		}
-	}()
+	go c.resyncDomains()
 
 	if err := c.selfBroadcast(); err != nil {
 		c.logger.Errorf(err, "Error broadcasting message")

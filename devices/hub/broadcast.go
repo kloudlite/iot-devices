@@ -10,9 +10,31 @@ import (
 
 const udpConnType = "udp"
 
+func (c *client) hc(conn *net.UDPConn) error {
+	defer func() {
+		time.Sleep(constants.PingInterval * time.Second)
+	}()
+
+	d := GetDomains()
+	message, err := d.ToBytes()
+	if err != nil {
+		return err
+	}
+
+	if c.ctx.Err() != nil {
+		return fmt.Errorf("Context cancelled")
+	}
+
+	_, err = conn.Write(message)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *client) selfBroadcast() error {
 	c.logger.Infof("Broadcasting message...")
-	defer c.logger.Infof("Broadcasting message ended")
 
 	broadcastAddr, err := net.ResolveUDPAddr(udpConnType, fmt.Sprintf("%s:%d", constants.BroadcastIP, constants.BroadcastPort))
 	if err != nil {
@@ -30,19 +52,9 @@ func (c *client) selfBroadcast() error {
 	}
 	defer conn.Close()
 
-	message := []byte("Ping")
-
 	for {
-
-		if c.ctx.Err() != nil {
-			return fmt.Errorf("Context cancelled")
+		if err := c.hc(conn); err != nil {
+			c.logger.Errorf(err, "Error sending broadcast message")
 		}
-
-		_, err := conn.Write(message)
-		if err != nil {
-			// TODO: handle error
-			return err
-		}
-		time.Sleep(constants.BroadcastInterval * time.Second)
 	}
 }

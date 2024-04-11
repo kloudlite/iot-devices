@@ -31,7 +31,7 @@ func GetHealthyUrl() string {
 }
 
 func GetPingUrl() string {
-	return fmt.Sprintf("https://%s/healthy", IotServerEndpoint)
+	return fmt.Sprintf("https://%s/device", IotServerEndpoint)
 }
 
 func GetIotServerEndpoint() string {
