@@ -34,6 +34,9 @@ func (c *client) setRules() error {
 	}
 
 	for {
+		if c.ctx.Err() != nil {
+			return fmt.Errorf("context cancelled")
+		}
 
 		m := hubs.GetHubs()
 		if len(m) == 0 {
@@ -77,8 +80,11 @@ func (c *client) removeRules(ips map[string]hb) {
 
 }
 
-func (c *client) ipTableRules() {
+func (c *client) ipTableRules() error {
 	for {
+		if c.ctx.Err() != nil {
+			return fmt.Errorf("context cancelled")
+		}
 		c.setRules()
 	}
 }
