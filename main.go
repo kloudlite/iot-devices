@@ -13,7 +13,6 @@ import (
 )
 
 func main() {
-
 	var mode string
 	flag.StringVar(&mode, "mode", "default", "--mode [local|hub|default]")
 	flag.Parse()

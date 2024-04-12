@@ -13,7 +13,7 @@ func (c *client) setRules() error {
 
 	defer c.removeRules(ips)
 
-	var mark map[string]bool
+	mark := map[string]bool{}
 
 	for hub, v := range ips {
 		for _, ips := range v.domains {
@@ -59,7 +59,7 @@ func (c *client) removeRules(ips map[string]hb) {
 
 	fmt.Println("Removing rules")
 
-	var mark map[string]bool
+	mark := map[string]bool{}
 	for _, v := range ips {
 		for _, ips := range v.domains {
 			for _, ip := range ips {
