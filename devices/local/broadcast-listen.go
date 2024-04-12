@@ -34,34 +34,46 @@ func (c *client) listenBroadcast() error {
 	defer conn.Close()
 
 	buffer := make([]byte, 1024)
+
 	for {
-		if c.ctx.Err() != nil {
+		select {
+		case <-c.ctx.Done():
 			return fmt.Errorf("Context cancelled")
-		}
+		default:
 
-		n, addr, err := conn.ReadFromUDP(buffer)
-		if err != nil {
-			c.logger.Errorf(err, "Error reading from UDP connection")
-			continue
-		}
-
-		if addr.String() != localAddr.String() {
-
-			var dm hub.Dms
-
-			if err := dm.FromBytes(buffer[:n]); err != nil {
-				c.logger.Errorf(err, "Error decoding message")
+			// Set a timeout on the read operation
+			if err := conn.SetReadDeadline(time.Now().Add(constants.PingInterval * time.Second)); err != nil {
+				c.logger.Errorf(err, "Error setting read deadline")
 				continue
 			}
 
-			if constants.IsDebug() {
-				c.logger.Infof("Received message from %s: %s", addr, string(buffer[:n]))
+			n, addr, err := conn.ReadFromUDP(buffer)
+			if err != nil {
+				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+					continue
+				}
+				c.logger.Errorf(err, "Error reading from UDP connection")
+				continue
 			}
 
-			d := time.Now()
-			hubs[addr.IP.String()] = hb{
-				lastPing: &d,
-				domains:  dm,
+			if addr.String() != localAddr.String() {
+
+				var dm hub.Dms
+
+				if err := dm.FromBytes(buffer[:n]); err != nil {
+					c.logger.Errorf(err, "Error decoding message")
+					continue
+				}
+
+				if constants.IsDebug() {
+					c.logger.Infof("Received message from %s: %s", addr, string(buffer[:n]))
+				}
+
+				d := time.Now()
+				hubs[addr.IP.String()] = hb{
+					lastPing: &d,
+					domains:  dm,
+				}
 			}
 		}
 	}

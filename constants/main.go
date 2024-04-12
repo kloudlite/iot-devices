@@ -4,6 +4,7 @@ import "fmt"
 
 const (
 	IotServerEndpoint = "iotnet.dev.kloudlite.io"
+	DnsDomain         = "one.one.one.one"
 
 	BroadcastIP   = "255.255.255.255"
 	BroadcastPort = 12345

@@ -37,6 +37,7 @@ func main() {
 
 func onlyLocal() error {
 	l, err := logging.New(&logging.Options{})
+
 	if err != nil {
 		return err
 	}
@@ -71,30 +72,43 @@ func onlyHub() error {
 }
 
 func run() error {
-	l, err := logging.New(&logging.Options{})
+	l, err := logging.New(&logging.Options{
+		Name: "ik-app",
+	})
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cf := context.WithCancel(context.Background())
 
-	var isConnected = utils.IsConn()
+	var obj = struct {
+		IsConnected bool
+		cancel      context.CancelFunc
+	}{
+		IsConnected: utils.IsConn(),
+		cancel:      cf,
+	}
 
-	go func() {
+	go func(o *struct {
+		IsConnected bool
+		cancel      context.CancelFunc
+	}) {
 		for {
 			ic := utils.IsConn()
-			if isConnected != ic {
-				isConnected = ic
-				cancel()
+			if o.IsConnected != ic {
+				o.IsConnected = ic
+				l.Infof("Connection status changed to %v", o.IsConnected)
+				o.cancel()
 			}
 
 			time.Sleep(5 * time.Second)
 		}
-	}()
+	}(&obj)
 
 	for {
-		ctx, cancel = context.WithCancel(context.Background())
-		if isConnected {
+		ctx, cf2 := context.WithCancel(context.Background())
+		obj.cancel = cf2
+		if obj.IsConnected {
 			if err := hub.Run(ctx, l); err != nil {
 				l.Errorf(err, "Error running hub")
 				continue

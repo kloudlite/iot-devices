@@ -53,4 +53,5 @@ func (c *client) resyncDomains() {
 
 		time.Sleep(5 * time.Second)
 	}
+
 }

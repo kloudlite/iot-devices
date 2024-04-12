@@ -15,6 +15,7 @@ import (
 var (
 	domains = []string{
 		constants.IotServerEndpoint,
+		constants.DnsDomain,
 	}
 )
 

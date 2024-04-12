@@ -2,6 +2,7 @@ package local
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/kloudlite/iot-devices/constants"
@@ -24,7 +25,36 @@ func (h *hubstype) cleanup() {
 	}
 }
 
-func (h *hubstype) GetHubs() map[string]hb {
+func (h *hubstype) compare(b hubstype) bool {
+	if len(*h) != len(b) {
+		return false
+	}
+
+	for k, v := range *h {
+		bv, ok := (b)[k]
+		if !ok {
+			return false
+		}
+
+		for k2, v2 := range v.domains {
+			k3, ok := bv.domains[k2]
+			if !ok {
+				return false
+			}
+
+			for _, v3 := range v2 {
+				if !slices.Contains(k3, v3) {
+					return false
+				}
+			}
+		}
+
+	}
+
+	return true
+}
+
+func (h *hubstype) GetHubs() hubstype {
 	h.cleanup()
 
 	d := map[string]hb{}
@@ -58,6 +88,8 @@ func Run(ctx context.Context, logger logging.Logger) error {
 	if err := c.listenBroadcast(); err != nil {
 		return err
 	}
+
+	c.logger.Infof("Exiting local")
 
 	return nil
 }
