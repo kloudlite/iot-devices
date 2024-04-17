@@ -58,13 +58,11 @@ var (
 )
 
 func (c *client) write(cf string) error {
-
-	c.Stop()
-
 	if err := os.WriteFile(constants.K3sConfigPath, []byte(cf), 0644); err != nil {
 		return err
 	}
 
+	c.Stop()
 	return c.Start()
 }
 
@@ -85,11 +83,27 @@ func (c *client) UpsertConfig(cf string) error {
 	return c.write(cf)
 }
 
-func (c *client) ApplyInstallJob(accountName, clusterToken string) error {
-	b, err := templates.ParseTemplate(templates.AgentInstallJob, map[string]any{
-		"accountName":  accountName,
-		"clusterToken": clusterToken,
-	})
+func (c *client) ApplyInstallJob(obj map[string]any) error {
+
+	update := false
+	if err := utils.ExecCmd("k3s kubectl get deployments/kl-agent -n kloudlite", true); err != nil {
+		update = true
+
+	}
+
+	if !update {
+		if err := utils.ExecCmd("k3s kubectl get deployments/kl-agent-operator -n kloudlite", true); err != nil {
+			update = true
+		}
+	}
+
+	if !update {
+		return nil
+	}
+
+	utils.ExecCmd("k3s kubectl delete job/helm-job-kloudlite-agent -n kloudlite", true)
+
+	b, err := templates.ParseTemplate(templates.AgentInstallJob, obj)
 	if err != nil {
 		return err
 	}

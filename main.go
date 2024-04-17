@@ -40,7 +40,7 @@ func onlyLocal(ctx types.MainCtx) error {
 
 	go common.StartPing(ctx)
 
-	println("Connection is unhealthy")
+	ctx.GetLogger().Infof("Connection is unhealthy")
 	if err := local.Run(ctx); err != nil {
 		ctx.GetLogger().Errorf(err, "Error running local")
 		return err

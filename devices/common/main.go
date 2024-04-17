@@ -15,23 +15,22 @@ import (
 	"github.com/kloudlite/iot-devices/types"
 )
 
-func getConfig(resp types.Response, ip, token string) string {
+func getConfig(resp types.Response, ip, token, version string) string {
 	temp := `
 runAs: primaryMaster
 primaryMaster:
   publicIP: {{ip}}
   token: {{token}}
   nodeName: master-1
-  labels: {"kloudlite.io/node.has-role":"primary-master","kloudlite.io/provider.name":"raspberry","kloudlite.io/release":"v1.0.5-nightly"}
+  labels: {"kloudlite.io/node.has-role":"primary-master","kloudlite.io/provider.name":"raspberry","kloudlite.io/release":"{{version}}"}
   SANs: ["{{ip}}"]
-  taints: ["node-role.kubernetes.io/master=:NoSchedule"]
-  extraServerArgs: ["--disable-helm-controller","--disable","traefik","--disable","servicelb","--node-external-ip","{{ip}}","--cluster-domain","cluster.local","--kubelet-arg","--system-reserved=cpu=100m,memory=200Mi,ephemeral-storage=1Gi,pid=1000","--datastore-endpoint","sqlite:///var/lib/rancher/k3s/server/db/state.db","--cluster-cidr","10.1.0.0/16","--service-cidr","{{svcCidr}}"]
+  extraServerArgs: ["--disable-helm-controller","--disable","traefik","--disable","servicelb","--node-external-ip","{{ip}}","--cluster-domain","cluster.local","--kubelet-arg","--system-reserved=cpu=100m,memory=200Mi,ephemeral-storage=1Gi,pid=1000","--datastore-endpoint","sqlite:///var/lib/rancher/k3s/server/db/state.db","--cluster-cidr","10.1.0.0/16","--service-cidr","{{svcCidr}}","--flannel-external-ip"]
     `
 
 	s := strings.ReplaceAll(temp, "{{ip}}", ip)
 	s = strings.ReplaceAll(s, "{{token}}", token)
 	s = strings.ReplaceAll(s, "{{svcCidr}}", resp.ServiceCIDR)
-
+	s = strings.ReplaceAll(s, "{{version}}", version)
 	return s
 }
 
@@ -101,13 +100,20 @@ func ping(ctx types.MainCtx) error {
 			return err
 		}
 
-		conf := getConfig(response, ip, string(c.PrivateKey))
+		// TODO: version needs to be come from the server
+		vr := "v1.0.6-nightly"
+
+		conf := getConfig(response, ip, string(c.PrivateKey), vr)
 		if err := k3s.New(ctx).UpsertConfig(conf); err != nil {
 			return err
 		}
 
-		// TODO: needs to get cluser token from server and provider here
-		if err := k3s.New(ctx).ApplyInstallJob(response.AccountName, "cluster-token"); err != nil {
+		if err := k3s.New(ctx).ApplyInstallJob(map[string]any{
+			"accountName":  response.AccountName,
+			"clusterToken": response.ClusterToken,
+			"clusterName":  fmt.Sprintf("iot-device-%s", response.Name),
+			"version":      vr,
+		}); err != nil {
 			return err
 		}
 

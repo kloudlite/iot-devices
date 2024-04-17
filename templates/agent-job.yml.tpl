@@ -1,6 +1,41 @@
-{{ $accountName := .get "accountName" }}
-{{ $clusterToken := .get "clusterToken" }}
+{{- $accountName := get . "accountName" }}
+{{- $clusterToken := get . "clusterToken" }}
+{{- $clusterName := get . "clusterName" }}
+{{- $version := get . "version" }}
 
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kloudlite
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    kloudlite.io/description: Service account used by helm charts to run helm release jobs
+  name: helm-job-svc-account
+  namespace: kloudlite
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    kloudlite.io/description: Cluster role binding used by helm charts to run helm
+      release jobs
+  name: helm-job-svc-account-rb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: helm-job-svc-account
+  namespace: kloudlite
+
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -36,8 +71,7 @@ spec:
           helm repo update helm-repo
           echo "running pre-install job script"
 
-          kubectl apply -f https://github.com/kloudlite/helm-charts/releases/download/v1.0.6-nightly/crds-kloudlite.yml --server-side
-
+          kubectl apply -f https://github.com/kloudlite/helm-charts/releases/download/{{ $version }}/crds-all.yml --server-side
 
 
           cat > values.yml <<EOF
@@ -51,7 +85,7 @@ spec:
           cloudProvider: aws
           clusterIdentitySecretName: kl-cluster-identity
           clusterInternalDNS: cluster.local
-          clusterName: primecluster
+          clusterName: {{ $clusterName }}
           clusterToken: {{ $clusterToken }}
           helmCharts:
             certManager:
@@ -89,7 +123,7 @@ spec:
 
           EOF
 
-          helm upgrade --install kloudlite-agent helm-repo/kloudlite-agent --namespace kloudlite --version v1.0.6-nightly --values values.yml 2>&1 | tee /dev/termination-log
+          helm upgrade --install kloudlite-agent helm-repo/kloudlite-agent --namespace kloudlite --version {{ $version }} --values values.yml 2>&1 | tee /dev/termination-log
           echo "running post-install job script"
 
           if kubectl get ns kloudlite-tmp;
@@ -99,7 +133,7 @@ spec:
 
 
 
-        image: ghcr.io/kloudlite/kloudlite/operator/workers/helm-job-runner:v1.0.5-nightly
+        image: ghcr.io/kloudlite/kloudlite/operator/workers/helm-job-runner:{{ $version }}
         imagePullPolicy: IfNotPresent
         name: helm
         resources: {}
@@ -112,5 +146,3 @@ spec:
       serviceAccount: helm-job-svc-account
       serviceAccountName: helm-job-svc-account
       terminationGracePeriodSeconds: 30
-      tolerations:
-      - operator: Exists

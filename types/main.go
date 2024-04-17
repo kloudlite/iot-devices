@@ -27,6 +27,7 @@ type Response struct {
 	Version           string   `json:"version"`
 	ExposedDomains    []string `json:"exposedDomains"`
 	ExposedIPs        []string `json:"exposedIps"`
+	ClusterToken      string   `json:"clusterToken"`
 
 	Reset bool `json:"reset"`
 }
@@ -132,6 +133,7 @@ func NewMainCtxOrDie(domains []string) MainCtx {
 
 	l, err := logging.New(&logging.Options{
 		Name: constants.AppName,
+		Dev:  true,
 	})
 	if err != nil {
 		panic(err)
@@ -142,5 +144,4 @@ func NewMainCtxOrDie(domains []string) MainCtx {
 		logger:  l,
 		ctx:     context.Background(),
 	}
-
 }

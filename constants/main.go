@@ -46,5 +46,5 @@ func GetIotServerEndpoint() string {
 	return fmt.Sprintf("https://%s", IotServerEndpoint)
 }
 
-var DefaultExposedDomains = []string{IotServerEndpoint, DnsDomain}
+var DefaultExposedDomains = []string{IotServerEndpoint, DnsDomain, "github.com", "kloudlite.github.io"}
 var DefaultExposedIps = []string{}
