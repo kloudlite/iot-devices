@@ -24,7 +24,7 @@ primaryMaster:
   nodeName: master-1
   labels: {"kloudlite.io/node.has-role":"primary-master","kloudlite.io/provider.name":"raspberry","kloudlite.io/release":"{{version}}"}
   SANs: ["{{ip}}"]
-  extraServerArgs: ["--disable-helm-controller","--disable","traefik","--disable","servicelb","--node-external-ip","{{ip}}","--cluster-domain","cluster.local","--kubelet-arg","--system-reserved=cpu=100m,memory=200Mi,ephemeral-storage=1Gi,pid=1000","--datastore-endpoint","sqlite:///var/lib/rancher/k3s/server/db/state.db","--cluster-cidr","10.1.0.0/16","--service-cidr","{{svcCidr}}","--flannel-external-ip"]
+  extraServerArgs: ["--disable-helm-controller","--disable","traefik","--disable","servicelb","--node-external-ip","{{ip}}","--cluster-domain","cluster.local","--kubelet-arg","--system-reserved=cpu=100m,memory=200Mi,ephemeral-storage=1Gi,pid=1000","--datastore-endpoint","sqlite:///var/lib/rancher/k3s/server/db/state.db","--cluster-cidr","10.1.0.0/16","--service-cidr","{{svcCidr}}","--flannel-backend","host-gw"]
     `
 
 	s := strings.ReplaceAll(temp, "{{ip}}", ip)

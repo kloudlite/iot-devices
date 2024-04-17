@@ -87,17 +87,19 @@ func (c *client) ApplyInstallJob(obj map[string]any) error {
 
 	update := false
 	if err := utils.ExecCmd("k3s kubectl get deployments/kl-agent -n kloudlite", true); err != nil {
+		c.l.Errorf(err, "error getting kl-agent deployment")
 		update = true
-
 	}
 
 	if !update {
 		if err := utils.ExecCmd("k3s kubectl get deployments/kl-agent-operator -n kloudlite", true); err != nil {
+			c.l.Errorf(err, "error getting kl-agent-operator deployment")
 			update = true
 		}
 	}
 
 	if !update {
+		c.l.Infof("kloudlite agent already installed")
 		return nil
 	}
 
