@@ -32,7 +32,13 @@ func (d *Dms) FromBytes(b []byte) error {
 func (c *client) resyncDomains() {
 	for {
 		nd := map[string][]string{}
+		nd["ips"] = c.ctx.GetExposedIps()
+
 		for _, v := range c.ctx.GetDomains() {
+			if v == "ips" {
+				continue
+			}
+
 			s, err := utils.GetIps(v)
 			if err != nil {
 				c.logger.Errorf(err, "Error getting ips for domain %s", v)
@@ -46,4 +52,5 @@ func (c *client) resyncDomains() {
 
 		time.Sleep(5 * time.Second)
 	}
+
 }

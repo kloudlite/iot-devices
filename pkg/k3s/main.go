@@ -7,6 +7,7 @@ import (
 
 	"github.com/kloudlite/api/pkg/logging"
 	"github.com/kloudlite/iot-devices/constants"
+	"github.com/kloudlite/iot-devices/templates"
 	"github.com/kloudlite/iot-devices/types"
 
 	"github.com/kloudlite/iot-devices/utils"
@@ -57,13 +58,11 @@ var (
 )
 
 func (c *client) write(cf string) error {
-
-	c.Stop()
-
 	if err := os.WriteFile(constants.K3sConfigPath, []byte(cf), 0644); err != nil {
 		return err
 	}
 
+	c.Stop()
 	return c.Start()
 }
 
@@ -82,4 +81,42 @@ func (c *client) UpsertConfig(cf string) error {
 	}
 
 	return c.write(cf)
+}
+
+func (c *client) ApplyInstallJob(obj map[string]any) error {
+
+	update := false
+	if err := utils.ExecCmd("k3s kubectl get deployments/kl-agent -n kloudlite", true); err != nil {
+		c.l.Errorf(err, "error getting kl-agent deployment")
+		update = true
+	}
+
+	if !update {
+		if err := utils.ExecCmd("k3s kubectl get deployments/kl-agent-operator -n kloudlite", true); err != nil {
+			c.l.Errorf(err, "error getting kl-agent-operator deployment")
+			update = true
+		}
+	}
+
+	if !update {
+		c.l.Infof("kloudlite agent already installed")
+		return nil
+	}
+
+	utils.ExecCmd("k3s kubectl delete job/helm-job-kloudlite-agent -n kloudlite", true)
+
+	b, err := templates.ParseTemplate(templates.AgentInstallJob, obj)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(constants.K3sJobFile, b, 0644); err != nil {
+		return err
+	}
+
+	if err := utils.ExecCmd(fmt.Sprintf("k3s kubectl apply -f %s", constants.K3sJobFile), true); err != nil {
+		return err
+	}
+
+	return nil
 }

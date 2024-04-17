@@ -26,11 +26,13 @@ tasks:
     preconditions:
       - sh: '[ -n "{{.IP}}" ]'
         msg: 'var IP must have a value'
+      - sh: '[ -n "{{.passwd}}" ]'
+        msg: 'var passwd must have a value'
     cmds:
-      - ssh raspberry@{{.IP}} 'rm -f /home/raspberry/server'
-      - scp ./bin/server-arm raspberry@{{.IP}}:/home/raspberry/server
-      - scp ./k3s-setup.sh raspberry@{{.IP}}:/home/raspberry/k3s-setup.sh
-      - ssh raspberry@{{.IP}} 'sudo reboot'
+      - sshpass -p {{.passwd}} ssh raspberry@{{.IP}} 'rm -f /home/raspberry/server'
+      - sshpass -p {{.passwd}} scp ./bin/server-arm raspberry@{{.IP}}:/home/raspberry/server
+      - sshpass -p {{.passwd}} scp ./k3s-setup.sh raspberry@{{.IP}}:/home/raspberry/k3s-setup.sh
+      - sshpass -p {{.passwd}} ssh raspberry@{{.IP}} 'sudo reboot'
 
   build:
     env:

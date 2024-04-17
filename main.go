@@ -18,13 +18,7 @@ func main() {
 	flag.StringVar(&mode, "mode", "default", "--mode [local|hub|default]")
 	flag.Parse()
 
-	mctx := types.NewMainCtxOrDie([]string{
-		constants.IotServerEndpoint,
-		constants.DnsDomain,
-		"get.k3s.io",
-		"ghcr.io",
-		"registry.hub.docker.com",
-	})
+	mctx := types.NewMainCtxOrDie(constants.DefaultExposedDomains)
 
 	switch mode {
 	case "local":
@@ -46,7 +40,7 @@ func onlyLocal(ctx types.MainCtx) error {
 
 	go common.StartPing(ctx)
 
-	println("Connection is unhealthy")
+	ctx.GetLogger().Infof("Connection is unhealthy")
 	if err := local.Run(ctx); err != nil {
 		ctx.GetLogger().Errorf(err, "Error running local")
 		return err

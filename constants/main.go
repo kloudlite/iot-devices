@@ -22,6 +22,8 @@ const (
 
 	K3sConfigPath = "/home/raspberry/runner-config.yml"
 	K3sDataPath   = "/var/lib/rancher/k3s/server/db/"
+
+	K3sJobFile = "/tmp/kloudlite-k3s-job.yml"
 )
 
 var (
@@ -43,3 +45,6 @@ func GetPingUrl() string {
 func GetIotServerEndpoint() string {
 	return fmt.Sprintf("https://%s", IotServerEndpoint)
 }
+
+var DefaultExposedDomains = []string{IotServerEndpoint, DnsDomain, "github.com", "kloudlite.github.io"}
+var DefaultExposedIps = []string{}

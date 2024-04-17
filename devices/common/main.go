@@ -15,22 +15,22 @@ import (
 	"github.com/kloudlite/iot-devices/types"
 )
 
-func getConfig(ip, token string) string {
+func getConfig(resp types.Response, ip, token, version string) string {
 	temp := `
 runAs: primaryMaster
 primaryMaster:
   publicIP: {{ip}}
   token: {{token}}
   nodeName: master-1
-  labels: {"kloudlite.io/node.has-role":"primary-master","kloudlite.io/provider.name":"raspberry","kloudlite.io/release":"v1.0.5-nightly"}
+  labels: {"kloudlite.io/node.has-role":"primary-master","kloudlite.io/provider.name":"raspberry","kloudlite.io/release":"{{version}}"}
   SANs: ["{{ip}}"]
-  taints: ["node-role.kubernetes.io/master=:NoSchedule"]
-  extraServerArgs: ["--disable-helm-controller","--disable","traefik","--disable","servicelb","--node-external-ip","{{ip}}","--cluster-domain","cluster.local","--kubelet-arg","--system-reserved=cpu=100m,memory=200Mi,ephemeral-storage=1Gi,pid=1000","--datastore-endpoint","sqlite:///var/lib/rancher/k3s/server/db/state.db"]
+  extraServerArgs: ["--disable-helm-controller","--disable","traefik","--disable","servicelb","--node-external-ip","{{ip}}","--cluster-domain","cluster.local","--kubelet-arg","--system-reserved=cpu=100m,memory=200Mi,ephemeral-storage=1Gi,pid=1000","--datastore-endpoint","sqlite:///var/lib/rancher/k3s/server/db/state.db","--cluster-cidr","10.1.0.0/16","--service-cidr","{{svcCidr}}","--flannel-backend","host-gw"]
     `
 
 	s := strings.ReplaceAll(temp, "{{ip}}", ip)
 	s = strings.ReplaceAll(s, "{{token}}", token)
-
+	s = strings.ReplaceAll(s, "{{svcCidr}}", resp.ServiceCIDR)
+	s = strings.ReplaceAll(s, "{{version}}", version)
 	return s
 }
 
@@ -57,8 +57,7 @@ func ping(ctx types.MainCtx) error {
 	var data = struct {
 		PublicKey string `json:"publicKey"`
 	}{
-		// PublicKey: c.PublicKey,
-		PublicKey: "10.2.2.2",
+		PublicKey: c.PublicKey,
 	}
 
 	dataBytes, err := json.Marshal(data)
@@ -71,6 +70,7 @@ func ping(ctx types.MainCtx) error {
 	if err != nil {
 		return err
 	}
+
 	defer resp.Body.Close()
 
 	var response types.Response
@@ -92,14 +92,28 @@ func ping(ctx types.MainCtx) error {
 		}
 
 		ctx.UpdateDevice(&response)
+		ctx.UpdateDomains(response.ExposedDomains)
+		ctx.SetExposedIps(response.ExposedIPs)
 
 		ip, err := networkmanager.GetIfIp()
 		if err != nil {
 			return err
 		}
 
-		conf := getConfig(ip, string(c.PrivateKey))
+		// TODO: version needs to be come from the server
+		vr := "v1.0.6-nightly"
+
+		conf := getConfig(response, ip, string(c.PrivateKey), vr)
 		if err := k3s.New(ctx).UpsertConfig(conf); err != nil {
+			return err
+		}
+
+		if err := k3s.New(ctx).ApplyInstallJob(map[string]any{
+			"accountName":  response.AccountName,
+			"clusterToken": response.ClusterToken,
+			"clusterName":  fmt.Sprintf("iot-device-%s", response.Name),
+			"version":      vr,
+		}); err != nil {
 			return err
 		}
 
