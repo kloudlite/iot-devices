@@ -103,7 +103,7 @@ func run(ctx types.MainCtx) error {
 			}
 		}
 
-		println("Connection is unhealthy")
+		ctx.GetLogger().Infof("Connection is unhealthy")
 		if err := local.Run(ctx); err != nil {
 			ctx.GetLogger().Errorf(err, "Error running local")
 			continue

@@ -30,8 +30,6 @@ func IsConn() bool {
 		return true
 	}
 
-	fmt.Println("[ERROR] Connection is unhealthy")
-
 	return false
 }
 
